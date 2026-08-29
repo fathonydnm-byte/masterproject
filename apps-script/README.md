@@ -3,7 +3,7 @@
 Template dashboard project tracker aesthetic untuk Google Sheets, dengan:
 
 - ✅ Checkbox per to-do yang otomatis menghitung progress
-- 🌱 "Tanaman" yang makin subur (emoji) sesuai % to-do selesai per project, sampai 🌸 mekar penuh di 100%
+- 🌱 "Tanaman" yang makin subur (emoji) sesuai % to-do selesai per project, sampai 🌸 mekar penuh di 100% — ikonnya **bisa diganti bebas langsung dari sheet Config**, tanpa sentuh kode
 - 🔗 To-do bisa diklik langsung sebagai hyperlink ke folder resource/bukti (Google Drive, dsb.), lewat kolom **Link** tersendiri
 - 📅 **Deadline diisi per to-do** (bukan per project) — tiap to-do punya kolom Deadline & Sisa Waktu sendiri
 - ⏳ Countdown otomatis ("Xh Yj lagi") per to-do, plus ringkasan "deadline terdekat" di judul tiap project
@@ -119,20 +119,25 @@ const THEME = {
 };
 ```
 
-**Ganti emoji tahapan tanaman** — cari fungsi `buildPlantFormula_` di `Code.gs`, lalu edit langsung emoji di dalam tanda kutip sesuai selera (boleh diganti icon lain sama sekali, bukan cuma tanaman — misal 🔥/🚀/⭐, atau emoji lain):
+**Ganti emoji/ikon tahapan tanaman — TANPA sentuh kode sama sekali.** Buka sheet **`⚙️ Config`**, geser ke kolom **E-F**, ada tabel **"🎨 Pengaturan Ikon Progress"**:
 
-```js
-`COUNTIF(${txt},"<>")=0,"📋 Belum ada to-do",` +      // belum ada to-do sama sekali
-`${doneEqTotal},"🌸🌸🌸 100% Mekar!",` +                // 100%
-`${pct}>=0.75,"🌳 "&TEXT(${pct},"0%"),` +              // 75–99%
-`${pct}>=0.5,"🍀 "&TEXT(${pct},"0%"),` +               // 50–74%
-`${pct}>=0.25,"🌿 "&TEXT(${pct},"0%"),` +              // 25–49%
-`${pct}>0,"🌱 "&TEXT(${pct},"0%"),` +                  // 1–24%
-`TRUE,"🌰 0%")`                                        // 0%
-```
+| Tahap | Ikon / Teks |
+|-------|-------------|
+| Belum ada to-do sama sekali | 📋 Belum ada to-do |
+| 0% (ada to-do, belum ada yang selesai) | 🌰 |
+| 1% – 24% selesai | 🌱 |
+| 25% – 49% selesai | 🌿 |
+| 50% – 74% selesai | 🍀 |
+| 75% – 99% selesai | 🌳 |
+| 100% selesai (semua tercentang) | 🌸🌸🌸 100% Mekar! |
+
+Tinggal klik sel di kolom **Ikon / Teks** dan ganti isinya apa saja sesuai selera (boleh emoji lain sama sekali — 🔥/🚀/⭐/dst — atau bahkan teks biasa). Semua judul project di Dashboard mengambil nilainya langsung dari tabel ini lewat formula, jadi:
+
+- **Perubahan langsung terlihat seketika**, tidak perlu klik Refresh atau Run apa pun.
+- **Tidak akan pernah ditimpa ulang** oleh Refresh & Sort Dashboard maupun Build Ulang dari Nol — tabel ini murni milik Anda, script hanya membuatnya sekali di awal kalau belum ada, sesudah itu tidak disentuh lagi.
 
 ⚠️ Kalau ganti emoji, pilih yang sudah lama ada di Unicode (bukan emoji baru rilis 1–2 tahun terakhir) — beberapa emoji baru belum didukung penuh oleh semua font/OS dan bisa tampil sebagai kotak kosong (persis bug 🪴 yang diperbaiki di versi ini). Cara amannya: coba dulu satu emoji di sebuah cell kosong biasa di Sheets, kalau tampil normal berarti aman dipakai.
 
-Setelah mengubah apa pun di atas, klik **▶ Run** pada fungsi `renderDashboard` sekali lagi (atau pakai menu **🔄 Refresh & Sort Dashboard**) agar perubahan diterapkan — tidak perlu Build Ulang dari Nol untuk sekadar ganti emoji/warna.
+Untuk perubahan lain di atas (`MAX_PROJECTS`, `MAX_TODOS`, `THEME`) yang memang perlu edit `Code.gs`, klik **▶ Run** pada fungsi `renderDashboard` sekali lagi (atau pakai menu **🔄 Refresh & Sort Dashboard**) agar diterapkan.
 
 Kalau menambah `MAX_PROJECTS`, ingat juga menambah baris di sheet Config secara manual (isi kolom No & Nama Project) untuk slot tambahan tersebut.

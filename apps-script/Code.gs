@@ -50,10 +50,31 @@ const COL_LINK      = 4; // D — URL folder/bukti (baris to-do)
 const COL_DEADLINE  = 5; // E — deadline to-do ini (tanggal, opsional jam)
 const COL_COUNTDOWN = 6; // F — sisa waktu to-do ini (live formula)
 
-// Kolom di sheet Config
+// Kolom di sheet Config — daftar project (A-C)
 const CFG_COL_NO   = 1;
 const CFG_COL_NAME = 2;
 const CFG_COL_NOTE = 3;
+
+// Kolom di sheet Config — tabel Pengaturan Ikon Progress (E-F), terpisah
+// dari daftar project supaya lebar kolom tidak saling bentrok.
+const ICON_COL_LABEL = 5; // E
+const ICON_COL_VALUE = 6; // F
+const ICON_FIRST_ROW = 3; // baris pertama tabel ikon (setelah judul & header)
+
+// Urutan tahap HARUS selaras dengan urutan baris di tabel Pengaturan Ikon.
+// `default` hanya dipakai sekali saat tabel ini pertama kali dibuat — sesudah
+// itu nilainya 100% milik Anda, boleh diedit bebas di sheet Config kapan pun,
+// dan TIDAK PERNAH ditimpa ulang oleh script (lihat ensureIconSettings_).
+const ICON_STAGES = [
+  { key: 'empty', label: 'Belum ada to-do sama sekali', default: '📋 Belum ada to-do' },
+  { key: 'zero',  label: '0% (ada to-do, belum ada yang selesai)', default: '🌰' },
+  { key: 'p1',    label: '1% – 24% selesai', default: '🌱' },
+  { key: 'p25',   label: '25% – 49% selesai', default: '🌿' },
+  { key: 'p50',   label: '50% – 74% selesai', default: '🍀' },
+  { key: 'p75',   label: '75% – 99% selesai', default: '🌳' },
+  { key: 'full',  label: '100% selesai (semua tercentang)', default: '🌸🌸🌸 100% Mekar!' },
+];
+const ICON_TABLE_TITLE = '🎨 Pengaturan Ikon Progress (edit bebas, tidak akan ditimpa ulang)';
 
 // Tema warna — Earthy Green & Cream
 const THEME = {
@@ -150,6 +171,7 @@ function renderDashboard() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const configSheet = getOrCreateConfigSheet_(ss);
   const dashSheet = getOrCreateDashSheet_(ss);
+  ensureIconSettings_(configSheet);
 
   const configProjects = readConfigProjects_(configSheet);
   const preserved = readExistingDashboardData_(dashSheet);
@@ -240,6 +262,44 @@ function getOrCreateConfigSheet_(ss) {
   }
 
   return sheet;
+}
+
+/**
+ * Menulis tabel "Pengaturan Ikon Progress" di sheet Config (kolom E-F) kalau
+ * belum ada — sekali dibuat, isinya murni milik Anda dan TIDAK PERNAH ditimpa
+ * ulang oleh fungsi ini di render-render berikutnya (dicek lewat judul tabel
+ * di baris 1). Inilah yang membuat ganti-ganti emoji langsung dari sheet ini
+ * bisa "nempel" seterusnya, bukan cuma sampai refresh berikutnya.
+ */
+function ensureIconSettings_(sheet) {
+  const existingTitle = sheet.getRange(1, ICON_COL_LABEL).getValue().toString();
+  if (existingTitle === ICON_TABLE_TITLE) return;
+
+  sheet.getRange(1, ICON_COL_LABEL, 1, 2).breakApart().merge()
+    .setValue(ICON_TABLE_TITLE)
+    .setBackground(THEME.bannerBg)
+    .setFontColor(THEME.bannerText)
+    .setFontWeight('bold')
+    .setWrap(true);
+
+  sheet.getRange(2, ICON_COL_LABEL, 1, 2)
+    .setValues([['Tahap', 'Ikon / Teks']])
+    .setFontWeight('bold')
+    .setBackground(THEME.bandLightAlt);
+
+  const rows = ICON_STAGES.map((s) => [s.label, s.default]);
+  sheet.getRange(ICON_FIRST_ROW, ICON_COL_LABEL, rows.length, 2).setValues(rows);
+  sheet.getRange(ICON_FIRST_ROW, ICON_COL_VALUE, rows.length, 1).setHorizontalAlignment('center');
+
+  sheet.setColumnWidth(ICON_COL_LABEL, 260);
+  sheet.setColumnWidth(ICON_COL_VALUE, 220);
+}
+
+/** Referensi cross-sheet ke sel ikon tahap tertentu, dipakai di buildPlantFormula_. */
+function iconCellRef_(stageKey) {
+  const idx = ICON_STAGES.findIndex((s) => s.key === stageKey);
+  const row = ICON_FIRST_ROW + idx;
+  return `'${CONFIG_SHEET_NAME}'!$${colLetter_(ICON_COL_VALUE)}$${row}`;
 }
 
 function readConfigProjects_(sheet) {
@@ -542,20 +602,20 @@ function buildPlantFormula_(firstTodoRow, lastTodoRow) {
   const pct = `COUNTIFS(${chk},TRUE,${txt},"<>")/COUNTIF(${txt},"<>")`;
   const doneEqTotal = `COUNTIFS(${chk},TRUE,${txt},"<>")=COUNTIF(${txt},"<>")`;
 
-  // Catatan: emoji tahapan sengaja dipilih dari yang paling universal
-  // dukungannya lintas OS/font (hindari emoji baru seperti 🪴 potted plant
-  // yang di banyak sistem masih tampil sebagai kotak kosong/tofu).
-  // Silakan ganti emoji di sini kapan saja sesuai selera — lihat README
-  // bagian "Kustomisasi".
+  // Ikon tiap tahap TIDAK di-hardcode di sini — formula mengambil isinya
+  // langsung dari sheet Config (tabel "🎨 Pengaturan Ikon Progress", kolom F)
+  // lewat referensi cross-sheet. Jadi ganti emoji cukup edit sel di Config,
+  // tidak perlu sentuh kode, dan tidak akan pernah ditimpa ulang saat
+  // Dashboard di-refresh/di-build ulang (lihat ensureIconSettings_).
   return (
     `=IFS(` +
-    `COUNTIF(${txt},"<>")=0,"📋 Belum ada to-do",` +
-    `${doneEqTotal},"🌸🌸🌸 100% Mekar!",` +
-    `${pct}>=0.75,"🌳 "&TEXT(${pct},"0%"),` +
-    `${pct}>=0.5,"🍀 "&TEXT(${pct},"0%"),` +
-    `${pct}>=0.25,"🌿 "&TEXT(${pct},"0%"),` +
-    `${pct}>0,"🌱 "&TEXT(${pct},"0%"),` +
-    `TRUE,"🌰 0%")`
+    `COUNTIF(${txt},"<>")=0,${iconCellRef_('empty')},` +
+    `${doneEqTotal},${iconCellRef_('full')},` +
+    `${pct}>=0.75,${iconCellRef_('p75')}&" "&TEXT(${pct},"0%"),` +
+    `${pct}>=0.5,${iconCellRef_('p50')}&" "&TEXT(${pct},"0%"),` +
+    `${pct}>=0.25,${iconCellRef_('p25')}&" "&TEXT(${pct},"0%"),` +
+    `${pct}>0,${iconCellRef_('p1')}&" "&TEXT(${pct},"0%"),` +
+    `TRUE,${iconCellRef_('zero')}&" 0%")`
   );
 }
 
