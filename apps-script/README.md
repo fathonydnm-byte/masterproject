@@ -48,10 +48,11 @@ Buka sheet **`⚙️ Config`**:
 ### Mengisi to-do per project
 Buka sheet **`🌿 Dashboard`**. Setiap project punya blok berisi:
 
-- **Baris judul** (hijau): nama project, countdown deadline, dan status "tanaman" + %.
-- **10 baris to-do** di bawahnya:
-  - Kolom **checkbox** (klik untuk tandai selesai)
+- **Baris judul** (hijau): nama project, status "tanaman" + %, dan countdown deadline.
+- **10 baris to-do** di bawahnya, dari kiri ke kanan:
+  - Kolom **No.** — nomor urut 1–10, otomatis, hanya penanda urutan/kapasitas
   - Kolom **teks to-do** (ketik deskripsi tugasnya)
+  - Kolom **checkbox** (klik untuk tandai selesai)
   - Kolom **Link** (paste URL Google Drive folder/file bukti pengerjaan)
 
 Begitu kolom Link diisi, teks to-do di sebelahnya **otomatis berubah jadi hyperlink** (klik teksnya = buka link). Kalau kolom Link dikosongkan lagi, teks kembali jadi teks biasa.

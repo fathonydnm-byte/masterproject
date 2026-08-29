@@ -40,10 +40,12 @@ const FIRST_BLOCK_ROW = 5;           // baris pertama blok project di Dashboard
 const BLOCK_HEIGHT    = MAX_TODOS + 2; // 1 header + N to-do + 1 spacer
 
 // Kolom di sheet Dashboard
-const COL_CHECK    = 1; // A — checkbox
+// (baris to-do)  A=nomor urut · B=teks to-do · C=checkbox · D=link
+// (baris header) A:B=nama project (merge) · C=plant/% · D=countdown
+const COL_NUM      = 1; // A — nomor urut to-do / bagian merge nama project
 const COL_TODO     = 2; // B — teks to-do (jadi hyperlink kalau ada link)
-const COL_LINK     = 3; // C — URL folder/bukti (input manual)
-const COL_INFO     = 4; // D — plant % (header) / kosong (baris to-do)
+const COL_CHECK    = 3; // C — checkbox (baris to-do) / plant % (header)
+const COL_LINK     = 4; // D — URL folder/bukti (baris to-do) / countdown (header)
 const COL_DEADLINE = 6; // F — helper tanggal deadline (hidden)
 
 // Kolom di sheet Config
@@ -247,10 +249,10 @@ function getOrCreateDashSheet_(ss) {
   ss.setActiveSheet(sheet);
   ss.moveActiveSheet(1);
 
-  sheet.setColumnWidth(COL_CHECK, 40);
+  sheet.setColumnWidth(COL_NUM, 40);
   sheet.setColumnWidth(COL_TODO, 420);
+  sheet.setColumnWidth(COL_CHECK, 140);
   sheet.setColumnWidth(COL_LINK, 220);
-  sheet.setColumnWidth(COL_INFO, 220);
   sheet.setColumnWidth(5, 20);
   sheet.setColumnWidth(COL_DEADLINE, 140);
   sheet.hideColumns(5, 2);
@@ -278,14 +280,14 @@ function ensureHeaderBanner_(sheet) {
     .setHorizontalAlignment('center');
 
   const lastRow = FIRST_BLOCK_ROW + MAX_PROJECTS * BLOCK_HEIGHT - 1;
-  const chkAll = `A${FIRST_BLOCK_ROW + 1}:A${lastRow}`;
-  const txtAll = `B${FIRST_BLOCK_ROW + 1}:B${lastRow}`;
+  const chkAll = `${colLetter_(COL_CHECK)}${FIRST_BLOCK_ROW + 1}:${colLetter_(COL_CHECK)}${lastRow}`;
+  const txtAll = `${colLetter_(COL_TODO)}${FIRST_BLOCK_ROW + 1}:${colLetter_(COL_TODO)}${lastRow}`;
   const summaryFormula =
     `="📊 "&COUNTIFS(${chkAll},TRUE,${txtAll},"<>")&" dari "&COUNTIF(${txtAll},"<>")&` +
     `" to-do selesai ("&IF(COUNTIF(${txtAll},"<>")=0,0,ROUND(COUNTIFS(${chkAll},TRUE,${txtAll},"<>")/COUNTIF(${txtAll},"<>")*100,0))&"%)"`;
 
   sheet.getRange(3, 1, 1, 4).merge()
-    .setFormula(summaryFormula)
+    .setFormula(localizeFormula_(summaryFormula))
     .setBackground(THEME.headerBg)
     .setFontColor(THEME.headerText)
     .setFontWeight('bold')
@@ -322,15 +324,15 @@ function readExistingDashboardData_(sheet) {
     const startRow = FIRST_BLOCK_ROW + i * BLOCK_HEIGHT;
     if (startRow > lastRowInSheet) break;
 
-    const rawName = sheet.getRange(startRow, COL_CHECK).getValue().toString();
+    const rawName = sheet.getRange(startRow, COL_NUM).getValue().toString();
     const name = rawName.replace(/^🌿\s*/, '').trim();
     if (!name) continue;
 
-    const todoRange = sheet.getRange(startRow + 1, COL_CHECK, MAX_TODOS, COL_LINK);
+    const todoRange = sheet.getRange(startRow + 1, COL_TODO, MAX_TODOS, COL_LINK - COL_TODO + 1);
     const values = todoRange.getValues();
     const todos = values.map((row) => ({
-      checked: row[0] === true,
-      text: (row[1] || '').toString(),
+      text: (row[0] || '').toString(),
+      checked: row[1] === true,
       link: (row[2] || '').toString(),
     }));
     result[name] = todos;
@@ -355,8 +357,8 @@ function writeProjectBlock_(sheet, startRow, proj, todos) {
   const lastTodoRow = startRow + MAX_TODOS;
   const spacerRow = startRow + MAX_TODOS + 1;
 
-  // --- Header row: nama project, countdown, plant/% ---
-  sheet.getRange(headerRow, COL_CHECK, 1, 2).merge()
+  // --- Header row: nama project, plant/%, countdown ---
+  sheet.getRange(headerRow, COL_NUM, 1, 2).merge()
     .setValue('🌿 ' + proj.name)
     .setBackground(THEME.headerBg)
     .setFontColor(THEME.headerText)
@@ -372,31 +374,35 @@ function writeProjectBlock_(sheet, startRow, proj, todos) {
     deadlineCell.clearContent();
   }
 
-  sheet.getRange(headerRow, COL_INFO)
-    .setFormula(buildCountdownFormula_(headerRow))
+  sheet.getRange(headerRow, COL_CHECK)
+    .setFormula(localizeFormula_(buildPlantFormula_(firstTodoRow, lastTodoRow)))
     .setBackground(THEME.headerBg)
     .setFontColor(THEME.headerText)
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
 
-  // --- Kolom D dipakai untuk countdown (di atas), jadi plant/% kita taruh
-  //     menempel di kanan dalam baris to-do pertama sebagai ringkasan blok.
   sheet.getRange(headerRow, COL_LINK)
-    .setFormula(buildPlantFormula_(firstTodoRow, lastTodoRow))
+    .setFormula(localizeFormula_(buildCountdownFormula_(headerRow)))
     .setBackground(THEME.headerBg)
     .setFontColor(THEME.headerText)
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
 
-  // --- Baris to-do ---
+  // --- Baris to-do: nomor · teks to-do · checkbox · link ---
   const bandColor = THEME.bandLight;
   for (let i = 0; i < MAX_TODOS; i++) {
     const row = firstTodoRow + i;
     const data = todos[i] || { checked: false, text: '', link: '' };
 
+    sheet.getRange(row, COL_NUM)
+      .setValue(i + 1)
+      .setFontWeight('bold')
+      .setFontColor(THEME.border)
+      .setHorizontalAlignment('center');
+
     const checkCell = sheet.getRange(row, COL_CHECK);
     checkCell.insertCheckboxes();
-    checkCell.setValue(data.checked === true);
+    checkCell.setValue(data.checked === true).setHorizontalAlignment('center');
 
     const todoCell = sheet.getRange(row, COL_TODO);
     const linkCell = sheet.getRange(row, COL_LINK);
@@ -427,6 +433,34 @@ function writeProjectBlock_(sheet, startRow, proj, todos) {
 }
 
 // ------------------------------------------------------------------------
+// LOKALISASI FORMULA
+// ------------------------------------------------------------------------
+/**
+ * Spreadsheet dengan locale non-Inggris (termasuk Indonesia) memakai koma ","
+ * sebagai desimal dan titik-koma ";" sebagai pemisah argumen fungsi — bukan
+ * koma seperti yang kita tulis di kode. Kalau tidak dikonversi, formula
+ * berisi banyak fungsi (IFS/COUNTIFS) akan tampil sebagai #ERROR!.
+ * Semua formula di file ini ditulis dengan gaya AS (koma & titik desimal)
+ * lalu dikonversi otomatis lewat localizeFormula_() sebelum ditulis ke sheet.
+ */
+function usesPeriodDecimal_() {
+  const locale = (SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale() || 'en_US').toLowerCase();
+  const periodDecimalPrefixes = ['en', 'ja', 'ko', 'zh', 'th'];
+  return periodDecimalPrefixes.some((p) => locale.startsWith(p));
+}
+
+function localizeFormula_(usFormula) {
+  if (usesPeriodDecimal_()) return usFormula;
+  let out = usFormula.split(',').join(';'); // pemisah argumen: , -> ;
+  out = out.replace(/(\d)\.(\d)/g, '$1,$2'); // desimal: . -> ,
+  return out;
+}
+
+function colLetter_(colIndex) {
+  return String.fromCharCode(64 + colIndex);
+}
+
+// ------------------------------------------------------------------------
 // PEMBANGUN FORMULA (countdown & plant growth)
 // ------------------------------------------------------------------------
 function buildCountdownFormula_(headerRow) {
@@ -439,8 +473,8 @@ function buildCountdownFormula_(headerRow) {
 }
 
 function buildPlantFormula_(firstTodoRow, lastTodoRow) {
-  const chk = `A${firstTodoRow}:A${lastTodoRow}`;
-  const txt = `B${firstTodoRow}:B${lastTodoRow}`;
+  const chk = `${colLetter_(COL_CHECK)}${firstTodoRow}:${colLetter_(COL_CHECK)}${lastTodoRow}`;
+  const txt = `${colLetter_(COL_TODO)}${firstTodoRow}:${colLetter_(COL_TODO)}${lastTodoRow}`;
   const pct = `COUNTIFS(${chk},TRUE,${txt},"<>")/COUNTIF(${txt},"<>")`;
   const doneEqTotal = `COUNTIFS(${chk},TRUE,${txt},"<>")=COUNTIF(${txt},"<>")`;
 
