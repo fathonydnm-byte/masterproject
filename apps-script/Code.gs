@@ -90,8 +90,9 @@ function onOpen() {
  * Dipicu otomatis oleh Google Sheets setiap ada perubahan cell (simple
  * trigger, tidak perlu otorisasi tambahan). Dipakai untuk:
  *   - Sinkron ulang Dashboard saat daftar project di Config diubah.
- *   - Render ulang (termasuk urutan blok) saat Deadline sebuah to-do diubah.
  *   - Menempelkan hyperlink + strikethrough saat teks/link/checkbox diedit.
+ *   (Mengubah Deadline TIDAK memicu render ulang penuh — lihat catatan di
+ *    dalam blok DASH_SHEET_NAME di bawah.)
  */
 function onEdit(e) {
   try {
@@ -105,16 +106,14 @@ function onEdit(e) {
     }
 
     if (sheetName === DASH_SHEET_NAME) {
-      const startCol = e.range.getColumn();
-      const numCols = e.range.getNumColumns();
-      const touchesDeadline = startCol <= COL_DEADLINE && startCol + numCols - 1 >= COL_DEADLINE;
-
-      if (touchesDeadline) {
-        // Deadline sebuah to-do berubah -> urutan blok project bisa berubah.
-        renderDashboard();
-        return;
-      }
-
+      // Catatan: mengubah Deadline SENGAJA tidak memicu render ulang penuh
+      // di sini (dulu begitu, tapi bikin sheet "freeze" sesaat tiap kali
+      // satu deadline diisi). Countdown per to-do & ringkasan "deadline
+      // terdekat" di header project tetap live lewat FORMULA, jadi langsung
+      // ter-update sendiri tanpa script. Urutan BLOK project (siapa naik ke
+      // atas) baru disegarkan saat file dibuka lagi, atau lewat menu
+      // 🔄 Refresh & Sort Dashboard — supaya Anda bisa isi banyak deadline
+      // berturut-turut dengan mulus, baru urutkan ulang saat sudah selesai.
       const startRow = e.range.getRow();
       const numRows = e.range.getNumRows();
 

@@ -64,7 +64,7 @@ Setiap project punya blok berisi:
 
 Begitu kolom **🔗 Link** diisi, teks to-do di sebelahnya **otomatis berubah jadi hyperlink biru** (klik teksnya = buka link). Kalau kolom Link dikosongkan lagi, teks kembali jadi teks biasa.
 
-Begitu kolom **📅 Deadline** salah satu to-do diubah, seluruh Dashboard otomatis di-render ulang — karena itu bisa saja mengubah project mana yang paling mendesak (lihat Auto-sort di bawah).
+Countdown **⏳ Sisa Waktu** dan ringkasan **deadline terdekat** di judul project langsung live begitu Deadline diisi (formula, bukan script) — tidak ada jeda/render ulang sama sekali. Yang BELUM langsung berubah saat itu juga adalah **urutan blok project** (lihat Auto-sort di bawah) — supaya Anda bisa isi banyak deadline berturut-turut dengan mulus tanpa sheet "freeze" tiap satu diisi.
 
 ### Progress "tanaman" & countdown
 Keduanya **hidup otomatis** (formula, bukan script) — begitu Anda centang checkbox, emoji tanaman & persentase langsung berubah tanpa perlu refresh apa pun. Tahapannya:
@@ -82,7 +82,7 @@ Keduanya **hidup otomatis** (formula, bukan script) — begitu Anda centang chec
 Ganti checklist yang sudah tercentang otomatis membuat teks to-do-nya **tercoret**, dan kalau kolom Link diisi teks to-do tetap tampil sebagai **hyperlink biru** (walau sudah dicoret) supaya tetap bisa diklik.
 
 ### Auto-sort berdasarkan deadline
-Setiap kali file **dibuka**, kolom Deadline sebuah to-do **diubah**, atau Anda klik menu **🌿 Master Project > 🔄 Refresh & Sort Dashboard**, seluruh blok project akan disusun ulang — project yang punya **to-do dengan sisa waktu paling sedikit** otomatis pindah ke paling atas. Urutan ditentukan dari to-do TERDEKAT di masing-masing project (bukan rata-rata), dan project tanpa deadline sama sekali ditaruh paling bawah. Urutan to-do **di dalam** satu project tidak ikut diacak — tetap sesuai urutan yang Anda ketik/susun sendiri. Data to-do & checklist yang sudah diisi tetap aman, hanya posisi bloknya yang berpindah.
+Urutan **blok project** (bukan countdown-nya, yang sudah live) disegarkan saat file **dibuka**, atau saat Anda klik menu **🌿 Master Project > 🔄 Refresh & Sort Dashboard** — sengaja tidak otomatis setiap satu Deadline diisi, supaya mengisi banyak to-do/deadline sekaligus tetap mulus tanpa sheet berhenti sesaat tiap kali. Saat disegarkan, seluruh blok project akan disusun ulang — project yang punya **to-do dengan sisa waktu paling sedikit** otomatis pindah ke paling atas. Urutan ditentukan dari to-do TERDEKAT di masing-masing project (bukan rata-rata), dan project tanpa deadline sama sekali ditaruh paling bawah. Urutan to-do **di dalam** satu project tidak ikut diacak — tetap sesuai urutan yang Anda ketik/susun sendiri. Data to-do & checklist yang sudah diisi tetap aman, hanya posisi bloknya yang berpindah.
 
 ### Menu tersedia
 Klik menu **🌿 Master Project** di menu bar spreadsheet:
