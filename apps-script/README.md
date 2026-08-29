@@ -132,9 +132,19 @@ const THEME = {
 | 75% – 99% selesai | 🌳 |
 | 100% selesai (semua tercentang) | 🌸🌸🌸 100% Mekar! |
 
-Tinggal klik sel di kolom **Ikon / Teks** dan ganti isinya apa saja sesuai selera (boleh emoji lain sama sekali — 🔥/🚀/⭐/dst — atau bahkan teks biasa). Semua judul project di Dashboard mengambil nilainya langsung dari tabel ini lewat formula, jadi:
+Tepat di bawah tabel itu (baris terpisah, bukan bagian dari 7 tahap di atas) ada satu setelan lagi:
 
-- **Perubahan langsung terlihat seketika**, tidak perlu klik Refresh atau Run apa pun.
+| Ikon di depan nama project (boleh dikosongkan) | 🌿 |
+|---|---|
+
+Ini yang menentukan ikon kecil di depan nama tiap project di judul blok Dashboard (misal "🌿 Project A"). Ganti isinya sesuka hati, atau kosongkan sel-nya kalau tidak mau ada ikon sama sekali di depan nama project.
+
+Untuk kedua bagian di atas: tinggal klik selnya dan ganti isinya apa saja sesuai selera (boleh emoji lain sama sekali — 🔥/🚀/⭐/dst — atau bahkan teks biasa). Bedanya:
+
+- **7 baris tahap progress** di atas: perubahan langsung terlihat seketika (itu formula, bukan script) — tidak perlu Refresh sama sekali.
+- **Ikon di depan nama project**: berlaku setelah Anda klik menu **🔄 Refresh & Sort Dashboard** sekali (nilai ini dibaca script saat menyusun ulang judul blok, bukan formula).
+
+Keduanya sama-sama:
 - **Tidak akan pernah ditimpa ulang** oleh Refresh & Sort Dashboard maupun Build Ulang dari Nol — tabel ini murni milik Anda, script hanya membuatnya sekali di awal kalau belum ada, sesudah itu tidak disentuh lagi.
 
 ⚠️ Kalau ganti emoji, pilih yang sudah lama ada di Unicode (bukan emoji baru rilis 1–2 tahun terakhir) — beberapa emoji baru belum didukung penuh oleh semua font/OS dan bisa tampil sebagai kotak kosong (persis bug 🪴 yang diperbaiki di versi ini). Cara amannya: coba dulu satu emoji di sebuah cell kosong biasa di Sheets, kalau tampil normal berarti aman dipakai.

@@ -76,6 +76,14 @@ const ICON_STAGES = [
 ];
 const ICON_TABLE_TITLE = '🎨 Pengaturan Ikon Progress (edit bebas, tidak akan ditimpa ulang)';
 
+// Ikon di depan nama project (baris terpisah, di bawah tabel tahap di atas —
+// ada 1 baris kosong sebagai jarak). Dulu ini "🌿" hardcode di kode; sekarang
+// ikut sepenuhnya bisa diedit dari Config seperti ikon tahap lainnya. Boleh
+// dikosongkan kalau tidak mau ada ikon sama sekali di depan nama project.
+const PROJECT_ICON_ROW = ICON_FIRST_ROW + ICON_STAGES.length + 1;
+const PROJECT_ICON_LABEL = 'Ikon di depan nama project (boleh dikosongkan)';
+const PROJECT_ICON_DEFAULT = '🌿';
+
 // Tema warna — Earthy Green & Cream
 const THEME = {
   bannerBg:     '#3f5e4a',
@@ -217,13 +225,14 @@ function renderDashboard() {
     // & checkbox "hilang"), tulis pesan penuntun yang jelas.
     writeEmptyStateMessage_(dashSheet);
   } else {
+    const projectIcon = readProjectIcon_(configSheet);
     projects.forEach((proj, idx) => {
       const startRow = FIRST_BLOCK_ROW + idx * BLOCK_HEIGHT;
       let todos = proj.todos;
       if (!todos && isFirstBuild && idx === 0) {
         todos = sampleTodos_();
       }
-      writeProjectBlock_(dashSheet, startRow, proj.name, todos || []);
+      writeProjectBlock_(dashSheet, startRow, proj.name, todos || [], projectIcon);
     });
   }
 
@@ -339,26 +348,42 @@ function ensureConfigHeader_(sheet) {
  */
 function ensureIconSettings_(sheet) {
   const existingTitle = sheet.getRange(1, ICON_COL_LABEL).getValue().toString();
-  if (existingTitle === ICON_TABLE_TITLE) return;
+  if (existingTitle !== ICON_TABLE_TITLE) {
+    sheet.getRange(1, ICON_COL_LABEL, 1, 2).breakApart().merge()
+      .setValue(ICON_TABLE_TITLE)
+      .setBackground(THEME.bannerBg)
+      .setFontColor(THEME.bannerText)
+      .setFontWeight('bold')
+      .setWrap(true);
 
-  sheet.getRange(1, ICON_COL_LABEL, 1, 2).breakApart().merge()
-    .setValue(ICON_TABLE_TITLE)
-    .setBackground(THEME.bannerBg)
-    .setFontColor(THEME.bannerText)
-    .setFontWeight('bold')
-    .setWrap(true);
+    sheet.getRange(2, ICON_COL_LABEL, 1, 2)
+      .setValues([['Tahap', 'Ikon / Teks']])
+      .setFontWeight('bold')
+      .setBackground(THEME.bandLightAlt);
 
-  sheet.getRange(2, ICON_COL_LABEL, 1, 2)
-    .setValues([['Tahap', 'Ikon / Teks']])
-    .setFontWeight('bold')
-    .setBackground(THEME.bandLightAlt);
+    const rows = ICON_STAGES.map((s) => [s.label, s.default]);
+    sheet.getRange(ICON_FIRST_ROW, ICON_COL_LABEL, rows.length, 2).setValues(rows);
+    sheet.getRange(ICON_FIRST_ROW, ICON_COL_VALUE, rows.length, 1).setHorizontalAlignment('center');
 
-  const rows = ICON_STAGES.map((s) => [s.label, s.default]);
-  sheet.getRange(ICON_FIRST_ROW, ICON_COL_LABEL, rows.length, 2).setValues(rows);
-  sheet.getRange(ICON_FIRST_ROW, ICON_COL_VALUE, rows.length, 1).setHorizontalAlignment('center');
+    sheet.setColumnWidth(ICON_COL_LABEL, 260);
+    sheet.setColumnWidth(ICON_COL_VALUE, 220);
+  }
 
-  sheet.setColumnWidth(ICON_COL_LABEL, 260);
-  sheet.setColumnWidth(ICON_COL_VALUE, 220);
+  // Baris "ikon di depan nama project" dicek & ditambahkan TERPISAH dari
+  // blok di atas — supaya pengguna yang tabel ikonnya sudah lebih dulu ada
+  // (dari versi sebelum baris ini ditambahkan) otomatis kebagian baris baru
+  // ini tanpa kehilangan kustomisasi ikon tahap yang sudah mereka isi.
+  const projectIconLabelCell = sheet.getRange(PROJECT_ICON_ROW, ICON_COL_LABEL).getValue().toString();
+  if (projectIconLabelCell !== PROJECT_ICON_LABEL) {
+    sheet.getRange(PROJECT_ICON_ROW, ICON_COL_LABEL, 1, 2)
+      .setValues([[PROJECT_ICON_LABEL, PROJECT_ICON_DEFAULT]]);
+    sheet.getRange(PROJECT_ICON_ROW, ICON_COL_VALUE).setHorizontalAlignment('center');
+  }
+}
+
+/** Nilai ikon di depan nama project saat ini (boleh string kosong = tanpa ikon). */
+function readProjectIcon_(sheet) {
+  return (sheet.getRange(PROJECT_ICON_ROW, ICON_COL_VALUE).getValue() || '').toString().trim();
 }
 
 /** Referensi cross-sheet ke sel ikon tahap tertentu, dipakai di buildPlantFormula_. */
@@ -489,8 +514,13 @@ function readExistingDashboardData_(sheet) {
     const startRow = FIRST_BLOCK_ROW + i * BLOCK_HEIGHT;
     if (startRow > lastRowInSheet) break;
 
+    // Lepas ikon dekoratif di depan nama (apa pun ikonnya — bisa beda-beda
+    // antar render kalau baru saja diganti di Config) dengan menghapus
+    // rentetan karakter non-huruf/angka di awal (emoji/simbol) beserta spasi
+    // sesudahnya, supaya pencocokan nama project tidak bergantung ke satu
+    // ikon tertentu yang di-hardcode.
     const rawName = sheet.getRange(startRow, COL_NUM).getValue().toString();
-    const name = rawName.replace(/^🌿\s*/, '').trim();
+    const name = rawName.replace(/^[^\p{L}\p{N}]+\s*/u, '').trim();
     if (!name) continue;
 
     const todoRange = sheet.getRange(startRow + 1, COL_TODO, MAX_TODOS, COL_DEADLINE - COL_TODO + 1);
@@ -522,11 +552,12 @@ function sampleTodos_() {
 // ------------------------------------------------------------------------
 // MENULIS SATU BLOK PROJECT
 // ------------------------------------------------------------------------
-function writeProjectBlock_(sheet, startRow, projName, todos) {
+function writeProjectBlock_(sheet, startRow, projName, todos, projectIcon) {
   const headerRow = startRow;
   const firstTodoRow = startRow + 1;
   const lastTodoRow = startRow + MAX_TODOS;
   const spacerRow = startRow + MAX_TODOS + 1;
+  const headerText = projectIcon ? `${projectIcon} ${projName}` : projName;
 
   // --- Header row: nama project · plant/% · ringkasan deadline terdekat ---
   // breakApart() dipanggil tepat sebelum tiap merge() sebagai pengaman —
@@ -535,7 +566,7 @@ function writeProjectBlock_(sheet, startRow, projName, todos) {
   // akan gagal (#ERROR "harus memilih semua sel dalam rentang penggabungan")
   // kalau target range tumpang tindih sebagian dengan merge lama.
   sheet.getRange(headerRow, COL_NUM, 1, 2).breakApart().merge()
-    .setValue('🌿 ' + projName)
+    .setValue(headerText)
     .setBackground(THEME.headerBg)
     .setFontColor(THEME.headerText)
     .setFontWeight('bold')
