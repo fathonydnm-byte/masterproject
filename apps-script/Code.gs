@@ -211,16 +211,38 @@ function renderDashboard() {
   ensureHeaderBanner_(dashSheet);
   clearDashboardBody_(dashSheet);
 
-  projects.forEach((proj, idx) => {
-    const startRow = FIRST_BLOCK_ROW + idx * BLOCK_HEIGHT;
-    let todos = proj.todos;
-    if (!todos && isFirstBuild && idx === 0) {
-      todos = sampleTodos_();
-    }
-    writeProjectBlock_(dashSheet, startRow, proj.name, todos || []);
-  });
+  if (projects.length === 0) {
+    // Config belum punya nama project sama sekali — daripada meninggalkan
+    // Dashboard kosong tanpa penjelasan (gampang disangka "rusak" / nomor
+    // & checkbox "hilang"), tulis pesan penuntun yang jelas.
+    writeEmptyStateMessage_(dashSheet);
+  } else {
+    projects.forEach((proj, idx) => {
+      const startRow = FIRST_BLOCK_ROW + idx * BLOCK_HEIGHT;
+      let todos = proj.todos;
+      if (!todos && isFirstBuild && idx === 0) {
+        todos = sampleTodos_();
+      }
+      writeProjectBlock_(dashSheet, startRow, proj.name, todos || []);
+    });
+  }
 
   SpreadsheetApp.flush();
+}
+
+function writeEmptyStateMessage_(sheet) {
+  sheet.getRange(FIRST_BLOCK_ROW, 1, 1, 6).breakApart().merge()
+    .setValue(
+      '👋 Dashboard masih kosong karena sheet ⚙️ Config belum punya "Nama Project" sama sekali.\n' +
+        'Isi minimal satu nama project di sana (kolom B), lalu jalankan menu 🌿 Master Project > 🔄 Refresh & Sort Dashboard.'
+    )
+    .setBackground(THEME.cream)
+    .setFontColor(THEME.textDark)
+    .setFontStyle('italic')
+    .setWrap(true)
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  sheet.setRowHeight(FIRST_BLOCK_ROW, 60);
 }
 
 function nearestDeadline_(todos) {
