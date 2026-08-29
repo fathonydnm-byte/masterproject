@@ -62,12 +62,15 @@ Keduanya **hidup otomatis** (formula, bukan script) — begitu Anda centang chec
 
 | % Selesai | Tampilan |
 |-----------|----------|
-| 0% (belum ada to-do dicentang) | 🌰 0% |
+| Belum ada to-do diisi sama sekali | 📋 Belum ada to-do |
+| 0% (ada to-do, belum ada yang dicentang) | 🌰 0% |
 | >0% – 24% | 🌱 |
 | 25% – 49% | 🌿 |
-| 50% – 74% | 🪴 |
+| 50% – 74% | 🍀 |
 | 75% – 99% | 🌳 |
 | 100% | 🌸🌸🌸 100% Mekar! |
+
+Ganti checklist yang sudah tercentang otomatis membuat teks to-do-nya **tercoret**, dan kalau kolom Link diisi teks to-do tetap tampil sebagai **hyperlink biru** (walau sudah dicoret) supaya tetap bisa diklik.
 
 ### Auto-sort berdasarkan deadline
 Setiap kali file **dibuka**, atau Anda klik menu **🌿 Master Project > 🔄 Refresh & Sort Dashboard**, seluruh blok project akan disusun ulang — project dengan **sisa waktu paling sedikit otomatis pindah ke paling atas**. Data to-do & checklist yang sudah diisi tetap aman, hanya posisi bloknya yang berpindah.
@@ -107,6 +110,20 @@ const THEME = {
 };
 ```
 
-Setelah mengubah, klik **▶ Run** pada fungsi `renderDashboard` sekali lagi (atau pakai menu **🚀 Build Ulang dari Nol**) agar perubahan diterapkan.
+**Ganti emoji tahapan tanaman** — cari fungsi `buildPlantFormula_` di `Code.gs`, lalu edit langsung emoji di dalam tanda kutip sesuai selera (boleh diganti icon lain sama sekali, bukan cuma tanaman — misal 🔥/🚀/⭐, atau emoji lain):
+
+```js
+`COUNTIF(${txt},"<>")=0,"📋 Belum ada to-do",` +      // belum ada to-do sama sekali
+`${doneEqTotal},"🌸🌸🌸 100% Mekar!",` +                // 100%
+`${pct}>=0.75,"🌳 "&TEXT(${pct},"0%"),` +              // 75–99%
+`${pct}>=0.5,"🍀 "&TEXT(${pct},"0%"),` +               // 50–74%
+`${pct}>=0.25,"🌿 "&TEXT(${pct},"0%"),` +              // 25–49%
+`${pct}>0,"🌱 "&TEXT(${pct},"0%"),` +                  // 1–24%
+`TRUE,"🌰 0%")`                                        // 0%
+```
+
+⚠️ Kalau ganti emoji, pilih yang sudah lama ada di Unicode (bukan emoji baru rilis 1–2 tahun terakhir) — beberapa emoji baru belum didukung penuh oleh semua font/OS dan bisa tampil sebagai kotak kosong (persis bug 🪴 yang diperbaiki di versi ini). Cara amannya: coba dulu satu emoji di sebuah cell kosong biasa di Sheets, kalau tampil normal berarti aman dipakai.
+
+Setelah mengubah apa pun di atas, klik **▶ Run** pada fungsi `renderDashboard` sekali lagi (atau pakai menu **🔄 Refresh & Sort Dashboard**) agar perubahan diterapkan — tidak perlu Build Ulang dari Nol untuk sekadar ganti emoji/warna.
 
 Kalau menambah `MAX_PROJECTS`, ingat juga menambah baris di sheet Config secara manual (isi kolom No, Nama Project, Deadline) untuk slot tambahan tersebut.

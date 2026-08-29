@@ -104,16 +104,19 @@ function onEdit(e) {
     }
 
     if (sheetName === DASH_SHEET_NAME) {
-      const row = e.range.getRow();
-      const col = e.range.getColumn();
-      if (row < FIRST_BLOCK_ROW) return;
+      const startRow = e.range.getRow();
+      const numRows = e.range.getNumRows();
 
-      const offset = (row - FIRST_BLOCK_ROW) % BLOCK_HEIGHT;
-      const isTodoRow = offset >= 1 && offset <= MAX_TODOS;
-      if (!isTodoRow) return;
-
-      if (col === COL_LINK || col === COL_TODO) {
-        applyHyperlinkStyle_(sheet, row);
+      // Loop semua baris yang tersentuh (menangani juga paste banyak baris
+      // sekaligus), lalu terapkan ulang style to-do (hyperlink + strikethrough)
+      // untuk setiap baris to-do yang kena — baik karena teks, link, MAUPUN
+      // checkbox-nya yang diedit.
+      for (let row = startRow; row < startRow + numRows; row++) {
+        if (row < FIRST_BLOCK_ROW) continue;
+        const offset = (row - FIRST_BLOCK_ROW) % BLOCK_HEIGHT;
+        const isTodoRow = offset >= 1 && offset <= MAX_TODOS;
+        if (!isTodoRow) continue;
+        styleTodoRow_(sheet, row);
       }
     }
   } catch (err) {
@@ -409,22 +412,13 @@ function writeProjectBlock_(sheet, startRow, proj, todos) {
     linkCell.setValue(data.link || '');
 
     if (data.text) {
-      if (data.link) {
-        const rich = SpreadsheetApp.newRichTextValue().setText(data.text).setLinkUrl(data.link).build();
-        todoCell.setRichTextValue(rich);
-      } else {
-        todoCell.setValue(data.text);
-      }
+      todoCell.setValue(data.text);
     } else {
       todoCell.clearContent();
     }
 
     sheet.getRange(row, 1, 1, 4).setBackground(bandColor);
-    if (data.checked) {
-      todoCell.setFontLine('line-through').setFontColor('#7c8a6e');
-    } else {
-      todoCell.setFontLine('none').setFontColor(THEME.textDark);
-    }
+    styleTodoRow_(sheet, row);
   }
 
   // --- Baris spacer ---
@@ -478,12 +472,17 @@ function buildPlantFormula_(firstTodoRow, lastTodoRow) {
   const pct = `COUNTIFS(${chk},TRUE,${txt},"<>")/COUNTIF(${txt},"<>")`;
   const doneEqTotal = `COUNTIFS(${chk},TRUE,${txt},"<>")=COUNTIF(${txt},"<>")`;
 
+  // Catatan: emoji tahapan sengaja dipilih dari yang paling universal
+  // dukungannya lintas OS/font (hindari emoji baru seperti 🪴 potted plant
+  // yang di banyak sistem masih tampil sebagai kotak kosong/tofu).
+  // Silakan ganti emoji di sini kapan saja sesuai selera — lihat README
+  // bagian "Kustomisasi".
   return (
     `=IFS(` +
-    `COUNTIF(${txt},"<>")=0,"🪴 Belum ada to-do",` +
+    `COUNTIF(${txt},"<>")=0,"📋 Belum ada to-do",` +
     `${doneEqTotal},"🌸🌸🌸 100% Mekar!",` +
     `${pct}>=0.75,"🌳 "&TEXT(${pct},"0%"),` +
-    `${pct}>=0.5,"🪴 "&TEXT(${pct},"0%"),` +
+    `${pct}>=0.5,"🍀 "&TEXT(${pct},"0%"),` +
     `${pct}>=0.25,"🌿 "&TEXT(${pct},"0%"),` +
     `${pct}>0,"🌱 "&TEXT(${pct},"0%"),` +
     `TRUE,"🌰 0%")`
@@ -491,23 +490,32 @@ function buildPlantFormula_(firstTodoRow, lastTodoRow) {
 }
 
 // ------------------------------------------------------------------------
-// HYPERLINK STYLING (dipanggil dari onEdit)
+// STYLING BARIS TO-DO (dipanggil dari writeProjectBlock_ maupun onEdit)
 // ------------------------------------------------------------------------
-function applyHyperlinkStyle_(sheet, row) {
-  const textCell = sheet.getRange(row, COL_TODO);
-  const linkCell = sheet.getRange(row, COL_LINK);
-  const text = textCell.getValue().toString();
-  const link = linkCell.getValue().toString().trim();
-
+/**
+ * Menerapkan dua hal berdasarkan isi baris to-do saat ini:
+ *   1. Hyperlink pada teks to-do kalau kolom Link diisi (warna biru garis
+ *      bawah bawaan Sheets untuk link SENGAJA tidak ditimpa, supaya tetap
+ *      kelihatan sebagai link yang bisa diklik).
+ *   2. Coret (strikethrough) otomatis begitu checkbox dicentang — berlaku
+ *      juga untuk teks yang jadi hyperlink (link tetap bisa diklik + coret).
+ */
+function styleTodoRow_(sheet, row) {
+  const todoCell = sheet.getRange(row, COL_TODO);
+  const text = todoCell.getValue().toString();
   if (!text) return;
+
+  const link = sheet.getRange(row, COL_LINK).getValue().toString().trim();
+  const checked = sheet.getRange(row, COL_CHECK).getValue() === true;
 
   if (link) {
     const rich = SpreadsheetApp.newRichTextValue().setText(text).setLinkUrl(link).build();
-    textCell.setRichTextValue(rich);
+    todoCell.setRichTextValue(rich);
   } else {
-    const rich = SpreadsheetApp.newRichTextValue().setText(text).build();
-    textCell.setRichTextValue(rich);
+    todoCell.setFontColor(checked ? '#7c8a6e' : THEME.textDark);
   }
+
+  todoCell.setFontLine(checked ? 'line-through' : 'none');
 }
 
 // ------------------------------------------------------------------------
