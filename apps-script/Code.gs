@@ -283,7 +283,9 @@ function getOrCreateDashSheet_(ss) {
 }
 
 function ensureHeaderBanner_(sheet) {
-  sheet.getRange(1, 1, 1, 6).merge()
+  // breakApart() sebelum merge() sebagai pengaman terhadap sisa merge lama
+  // (lihat catatan di writeProjectBlock_).
+  sheet.getRange(1, 1, 1, 6).breakApart().merge()
     .setValue('🌿 MASTER PROJECT TRACKER')
     .setBackground(THEME.bannerBg)
     .setFontColor(THEME.bannerText)
@@ -292,7 +294,7 @@ function ensureHeaderBanner_(sheet) {
     .setHorizontalAlignment('center');
   sheet.setRowHeight(1, 42);
 
-  sheet.getRange(2, 1, 1, 6).merge()
+  sheet.getRange(2, 1, 1, 6).breakApart().merge()
     .setValue('Klik checkbox untuk update progress • Klik teks to-do untuk membuka link • Isi Deadline per to-do untuk hitung mundur otomatis')
     .setBackground(THEME.cream)
     .setFontColor(THEME.textDark)
@@ -306,7 +308,7 @@ function ensureHeaderBanner_(sheet) {
     `="📊 "&COUNTIFS(${chkAll},TRUE,${txtAll},"<>")&" dari "&COUNTIF(${txtAll},"<>")&` +
     `" to-do selesai ("&IF(COUNTIF(${txtAll},"<>")=0,0,ROUND(COUNTIFS(${chkAll},TRUE,${txtAll},"<>")/COUNTIF(${txtAll},"<>")*100,0))&"%)"`;
 
-  sheet.getRange(3, 1, 1, 6).merge()
+  sheet.getRange(3, 1, 1, 6).breakApart().merge()
     .setFormula(localizeFormula_(summaryFormula))
     .setBackground(THEME.headerBg)
     .setFontColor(THEME.headerText)
@@ -317,6 +319,7 @@ function ensureHeaderBanner_(sheet) {
   // kolom Link/Deadline/dsb. tidak pernah ambigu.
   const labels = ['No', 'To-Do', 'Selesai', '🔗 Link', '📅 Deadline', '⏳ Sisa Waktu'];
   sheet.getRange(4, 1, 1, 6)
+    .breakApart()
     .setValues([labels])
     .setBackground(THEME.bandLightAlt)
     .setFontColor(THEME.textDark)
@@ -335,6 +338,12 @@ function isDashboardBodyEmpty_(sheet) {
 function clearDashboardBody_(sheet) {
   const totalRows = MAX_PROJECTS * BLOCK_HEIGHT;
   const range = sheet.getRange(FIRST_BLOCK_ROW, 1, totalRows, 6);
+
+  // Pecah SETIAP area merge satu per satu (bukan cuma breakApart() borongan
+  // di range gabungan) — ini yang benar-benar reliable melepas semua merge
+  // lama sebelum ditulis ulang, mencegah error "harus memilih semua sel
+  // dalam rentang penggabungan" saat merge() baru dipanggil nanti.
+  range.getMergedRanges().forEach((r) => r.breakApart());
   range.breakApart();
   range.clearContent();
   range.clearFormat();
@@ -395,7 +404,12 @@ function writeProjectBlock_(sheet, startRow, projName, todos) {
   const spacerRow = startRow + MAX_TODOS + 1;
 
   // --- Header row: nama project · plant/% · ringkasan deadline terdekat ---
-  sheet.getRange(headerRow, COL_NUM, 1, 2).merge()
+  // breakApart() dipanggil tepat sebelum tiap merge() sebagai pengaman —
+  // breakApart() borongan di clearDashboardBody_ kadang tidak konsisten
+  // melepas SEMUA area merge sekaligus dalam satu panggilan, dan merge()
+  // akan gagal (#ERROR "harus memilih semua sel dalam rentang penggabungan")
+  // kalau target range tumpang tindih sebagian dengan merge lama.
+  sheet.getRange(headerRow, COL_NUM, 1, 2).breakApart().merge()
     .setValue('🌿 ' + projName)
     .setBackground(THEME.headerBg)
     .setFontColor(THEME.headerText)
@@ -411,7 +425,7 @@ function writeProjectBlock_(sheet, startRow, projName, todos) {
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
 
-  sheet.getRange(headerRow, COL_LINK, 1, 3).merge()
+  sheet.getRange(headerRow, COL_LINK, 1, 3).breakApart().merge()
     .setFormula(localizeFormula_(buildNearestDeadlineFormula_(firstTodoRow, lastTodoRow)))
     .setBackground(THEME.headerBg)
     .setFontColor(THEME.headerText)
