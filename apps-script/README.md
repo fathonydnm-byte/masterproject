@@ -4,9 +4,10 @@ Template dashboard project tracker aesthetic untuk Google Sheets, dengan:
 
 - ✅ Checkbox per to-do yang otomatis menghitung progress
 - 🌱 "Tanaman" yang makin subur (emoji) sesuai % to-do selesai per project, sampai 🌸 mekar penuh di 100%
-- 🔗 To-do bisa diklik langsung sebagai hyperlink ke folder resource/bukti (Google Drive, dsb.)
-- ⏳ Countdown deadline otomatis ("X hari Y jam lagi") per project
-- ↕️ Project dengan sisa waktu paling sedikit otomatis naik ke paling atas
+- 🔗 To-do bisa diklik langsung sebagai hyperlink ke folder resource/bukti (Google Drive, dsb.), lewat kolom **Link** tersendiri
+- 📅 **Deadline diisi per to-do** (bukan per project) — tiap to-do punya kolom Deadline & Sisa Waktu sendiri
+- ⏳ Countdown otomatis ("Xh Yj lagi") per to-do, plus ringkasan "deadline terdekat" di judul tiap project
+- ↕️ Project yang punya to-do dengan sisa waktu paling sedikit otomatis naik ke paling atas
 
 ---
 
@@ -26,36 +27,44 @@ Template dashboard project tracker aesthetic untuk Google Sheets, dengan:
 8. Setelah selesai jalan tanpa error (lihat log di bawah, harus kosong/selesai), **kembali ke tab spreadsheet Anda dan refresh halaman (F5)**.
 9. Menu baru **"🌿 Master Project"** akan muncul di menu bar spreadsheet, dan sheet `⚙️ Config` serta `🌿 Dashboard` akan otomatis terbentuk lengkap dengan data contoh.
 
-Selesai! Sekarang Anda tinggal edit sheet `⚙️ Config` untuk isi project & deadline asli Anda.
+Selesai! Sekarang Anda tinggal edit sheet `⚙️ Config` untuk isi nama project, lalu isi to-do & deadline langsung di sheet Dashboard.
 
 ---
 
 ## 2. Cara Pakai Sehari-hari
 
-### Mengisi/mengubah project & deadline
+### Mengisi/mengubah daftar project
 Buka sheet **`⚙️ Config`**:
 
-| No | Nama Project | Deadline (Tanggal) | Deadline (Jam) | Catatan |
-|----|---------------|---------------------|------------------|---------|
-| 1  | Project A     | 2026-09-05          | (kosongkan = default 23:59) | |
+| No | Nama Project | Catatan |
+|----|---------------|---------|
+| 1  | Project A     | (opsional, bebas diisi apa saja) |
 
-- Ganti `Nama Project` sesuai project asli Anda.
-- Isi `Deadline (Tanggal)` — wajib diisi agar countdown & auto-sort berfungsi.
-- `Deadline (Jam)` boleh dikosongkan (otomatis dianggap jam 23:59).
+- Ganti `Nama Project` sesuai project asli Anda. Kolom `Catatan` bebas, tidak dipakai untuk perhitungan apa pun.
 - Tersedia **8 slot project**. Kalau butuh lebih banyak, tinggal ubah angka `MAX_PROJECTS` di baris atas `Code.gs` (lihat bagian Kustomisasi).
-- Setiap kali Anda edit sheet Config, **Dashboard otomatis menyesuaikan** (nama, deadline, urutan) — data to-do yang sudah Anda isi di Dashboard tidak akan hilang.
+- Setiap kali Anda edit sheet Config (ganti nama/tambah project), **Dashboard otomatis menyesuaikan** — data to-do yang sudah Anda isi di Dashboard tidak akan hilang.
+- Config sheet ini **tidak lagi punya kolom Deadline** — deadline sekarang diisi per to-do langsung di Dashboard (lihat di bawah).
 
 ### Mengisi to-do per project
-Buka sheet **`🌿 Dashboard`**. Setiap project punya blok berisi:
+Buka sheet **`🌿 Dashboard`**. Baris ke-4 (selalu kelihatan, ikut ter-freeze di atas) berisi label kolom supaya tidak pernah ambigu kolom mana untuk apa:
 
-- **Baris judul** (hijau): nama project, status "tanaman" + %, dan countdown deadline.
+| No | To-Do | Selesai | 🔗 Link | 📅 Deadline | ⏳ Sisa Waktu |
+|----|-------|---------|---------|-------------|----------------|
+
+Setiap project punya blok berisi:
+
+- **Baris judul** (hijau): nama project, status "tanaman" + %, dan **ringkasan deadline terdekat** dari to-do di project itu.
 - **10 baris to-do** di bawahnya, dari kiri ke kanan:
-  - Kolom **No.** — nomor urut 1–10, otomatis, hanya penanda urutan/kapasitas
-  - Kolom **teks to-do** (ketik deskripsi tugasnya)
-  - Kolom **checkbox** (klik untuk tandai selesai)
-  - Kolom **Link** (paste URL Google Drive folder/file bukti pengerjaan)
+  - **No** — nomor urut 1–10, otomatis, hanya penanda urutan/kapasitas
+  - **To-Do** — ketik deskripsi tugasnya
+  - **Selesai** — checkbox, klik untuk tandai selesai
+  - **🔗 Link** — paste URL Google Drive folder/file bukti pengerjaan
+  - **📅 Deadline** — klik cell lalu pilih tanggal dari date-picker Sheets (boleh juga ketik tanggal+jam kalau mau jam spesifik; kalau cuma tanggal, otomatis dianggap berlaku sampai jam 23:59 hari itu)
+  - **⏳ Sisa Waktu** — otomatis terisi begitu Deadline diisi, live, tidak perlu diisi manual
 
-Begitu kolom Link diisi, teks to-do di sebelahnya **otomatis berubah jadi hyperlink** (klik teksnya = buka link). Kalau kolom Link dikosongkan lagi, teks kembali jadi teks biasa.
+Begitu kolom **🔗 Link** diisi, teks to-do di sebelahnya **otomatis berubah jadi hyperlink biru** (klik teksnya = buka link). Kalau kolom Link dikosongkan lagi, teks kembali jadi teks biasa.
+
+Begitu kolom **📅 Deadline** salah satu to-do diubah, seluruh Dashboard otomatis di-render ulang — karena itu bisa saja mengubah project mana yang paling mendesak (lihat Auto-sort di bawah).
 
 ### Progress "tanaman" & countdown
 Keduanya **hidup otomatis** (formula, bukan script) — begitu Anda centang checkbox, emoji tanaman & persentase langsung berubah tanpa perlu refresh apa pun. Tahapannya:
@@ -73,7 +82,7 @@ Keduanya **hidup otomatis** (formula, bukan script) — begitu Anda centang chec
 Ganti checklist yang sudah tercentang otomatis membuat teks to-do-nya **tercoret**, dan kalau kolom Link diisi teks to-do tetap tampil sebagai **hyperlink biru** (walau sudah dicoret) supaya tetap bisa diklik.
 
 ### Auto-sort berdasarkan deadline
-Setiap kali file **dibuka**, atau Anda klik menu **🌿 Master Project > 🔄 Refresh & Sort Dashboard**, seluruh blok project akan disusun ulang — project dengan **sisa waktu paling sedikit otomatis pindah ke paling atas**. Data to-do & checklist yang sudah diisi tetap aman, hanya posisi bloknya yang berpindah.
+Setiap kali file **dibuka**, kolom Deadline sebuah to-do **diubah**, atau Anda klik menu **🌿 Master Project > 🔄 Refresh & Sort Dashboard**, seluruh blok project akan disusun ulang — project yang punya **to-do dengan sisa waktu paling sedikit** otomatis pindah ke paling atas. Urutan ditentukan dari to-do TERDEKAT di masing-masing project (bukan rata-rata), dan project tanpa deadline sama sekali ditaruh paling bawah. Urutan to-do **di dalam** satu project tidak ikut diacak — tetap sesuai urutan yang Anda ketik/susun sendiri. Data to-do & checklist yang sudah diisi tetap aman, hanya posisi bloknya yang berpindah.
 
 ### Menu tersedia
 Klik menu **🌿 Master Project** di menu bar spreadsheet:
@@ -126,4 +135,4 @@ const THEME = {
 
 Setelah mengubah apa pun di atas, klik **▶ Run** pada fungsi `renderDashboard` sekali lagi (atau pakai menu **🔄 Refresh & Sort Dashboard**) agar perubahan diterapkan — tidak perlu Build Ulang dari Nol untuk sekadar ganti emoji/warna.
 
-Kalau menambah `MAX_PROJECTS`, ingat juga menambah baris di sheet Config secara manual (isi kolom No, Nama Project, Deadline) untuk slot tambahan tersebut.
+Kalau menambah `MAX_PROJECTS`, ingat juga menambah baris di sheet Config secara manual (isi kolom No & Nama Project) untuk slot tambahan tersebut.
