@@ -97,7 +97,8 @@ Klik menu **🌿 Master Project** di menu bar spreadsheet:
 
 - Google Sheets **tidak bisa animasi real-time** (misal jam yang ticking tiap detik) tanpa panel terpisah. Countdown & progress di template ini **auto-update otomatis** setiap kali Anda membuka file, mengklik checkbox, atau melakukan perubahan apa pun di sheet (dan setidaknya sekali per menit sesuai pengaturan recalculation Google Sheets) — cukup untuk mengingatkan sisa waktu setiap kali dibuka, hanya bukan angka yang berjalan sendiri detik demi detik.
 - Nama project di sheet Config **sebaiknya unik** — dipakai sebagai kunci untuk mencocokkan data to-do saat sinkronisasi/urut ulang.
-- Jangan edit struktur baris/kolom di sheet Dashboard secara manual (insert/delete row, merge/unmerge) — biarkan script yang mengatur. Anda bebas mengedit isi checkbox, teks to-do, dan kolom link.
+- Jangan edit struktur baris/kolom di sheet Dashboard maupun header baris 1 sheet Config secara manual (insert/delete row, merge/unmerge sel) — biarkan script yang mengatur. Anda bebas mengedit isi checkbox, teks to-do, kolom link/deadline, nama project, dan tabel ikon.
+- **Pengaman anti data-hilang**: kalau sheet Config tiba-tiba terbaca tidak punya nama project sama sekali (misal header/data-nya tidak sengaja ter-merge atau terhapus) padahal Dashboard masih menyimpan to-do, script akan **membatalkan render** dan menampilkan peringatan, alih-alih menimpa Dashboard jadi kosong. Kalau muncul peringatan ini, cek dulu sheet Config sebelum menjalankan Refresh lagi.
 
 ---
 

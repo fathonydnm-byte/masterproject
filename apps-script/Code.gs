@@ -171,11 +171,31 @@ function renderDashboard() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const configSheet = getOrCreateConfigSheet_(ss);
   const dashSheet = getOrCreateDashSheet_(ss);
+  ensureConfigHeader_(configSheet);
   ensureIconSettings_(configSheet);
 
   const configProjects = readConfigProjects_(configSheet);
   const preserved = readExistingDashboardData_(dashSheet);
   const isFirstBuild = Object.keys(preserved).length === 0 && isDashboardBodyEmpty_(dashSheet);
+
+  // Pengaman anti data-hilang: kalau Config tiba-tiba tidak punya nama
+  // project SAMA SEKALI padahal Dashboard masih menyimpan to-do (misal
+  // header/isi Config tidak sengaja terhapus/ter-merge), batalkan render
+  // daripada menulis ulang Dashboard jadi kosong total. Kalau memang mau
+  // menghapus semua project dengan sengaja, gunakan menu
+  // 🚀 Build Ulang dari Nol yang sudah minta konfirmasi eksplisit.
+  if (configProjects.length === 0 && Object.keys(preserved).length > 0) {
+    SpreadsheetApp.getUi().alert(
+      '⚠️ Render dibatalkan — cek sheet Config',
+      'Sheet Config tidak terbaca punya nama project sama sekali, padahal Dashboard masih menyimpan ' +
+        'data to-do. Supaya data tidak hilang, render dibatalkan.\n\n' +
+        'Cek sheet ⚙️ Config: pastikan header baris 1 (No / Nama Project / Catatan) dan nama-nama ' +
+        'project di kolom B masih ada & tidak ter-merge/ter-hapus. Setelah diperbaiki, jalankan lagi ' +
+        'menu 🔄 Refresh & Sort Dashboard.',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    return;
+  }
 
   const projects = configProjects.map((p) => {
     const todos = preserved[p.name] || null;
@@ -262,6 +282,30 @@ function getOrCreateConfigSheet_(ss) {
   }
 
   return sheet;
+}
+
+/**
+ * Pengaman self-healing: kalau header baris 1 (No / Nama Project / Catatan)
+ * ternyata hilang/berubah (misal tidak sengaja ter-merge/terhapus/tertimpa),
+ * tulis ulang HANYA baris 1 ini. Baris 2 ke bawah (data nama project Anda)
+ * TIDAK PERNAH disentuh oleh fungsi ini, jadi aman dipanggil di setiap
+ * renderDashboard() tanpa risiko menghapus data.
+ */
+function ensureConfigHeader_(sheet) {
+  const expected = ['No', 'Nama Project', 'Catatan'];
+  const current = sheet.getRange(1, 1, 1, 3).getValues()[0].map((v) => v.toString());
+  const matches = expected.every((v, i) => current[i] === v);
+  if (matches) return;
+
+  sheet.getRange(1, 1, 1, 3).breakApart().setValues([expected]);
+  sheet.getRange(1, 1, 1, 3)
+    .setBackground(THEME.bannerBg)
+    .setFontColor(THEME.bannerText)
+    .setFontWeight('bold');
+  sheet.setColumnWidth(1, 40);
+  sheet.setColumnWidth(2, 220);
+  sheet.setColumnWidth(3, 380);
+  sheet.setFrozenRows(1);
 }
 
 /**
